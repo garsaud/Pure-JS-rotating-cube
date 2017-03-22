@@ -1,0 +1,163 @@
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body {
+	text-align: center;
+	background: #ccc;
+	text-rendering: optimizeSpeed;
+	-webkit-font-smoothing: none;
+	-moz-osx-font-smoothing: unset;
+}
+#canvas {
+	font-family: Courier, "Courier New", monospace;
+	font-size: 10px;
+	line-height: 6px;
+	display: inline-block;
+	margin-top:50px;
+	text-align: left;
+}
+</style>
+</head>
+<body>
+<pre id="canvas"></pre>
+<script>
+var canvas = document.getElementById("canvas");
+var canvasWidth = 100;
+var canvasHeight = 100;
+var delay = 20;
+
+var buffer = new Array(canvasHeight);
+for (var y = 0; y < canvasHeight; y++)
+	buffer[y] = new Array(canvasWidth);
+
+var pitch = -10;
+var yaw = 5;
+var radius = 30;
+
+var positionX = canvasWidth/2;
+var positionY = canvasHeight/2;
+
+function update()
+{
+	clear();
+
+	yaw += horizontal_speed / 10000;
+	pitch += vertical_speed / 10000;
+
+	var topX = [], topY = [], botX = [], botY = [];
+
+	topX.push(Math.sin(yaw+0)*radius+positionX);
+	topY.push(Math.cos(yaw+0)*radius*Math.sin(pitch)+Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	topX.push(Math.sin(yaw+1.5708)*radius+positionX);
+	topY.push(Math.cos(yaw+1.5708)*radius*Math.sin(pitch)+Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	topX.push(Math.sin(yaw+3.14159)*radius+positionX);
+	topY.push(Math.cos(yaw+3.14159)*radius*Math.sin(pitch)+Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	topX.push(Math.sin(yaw+4.71239)*radius+positionX);
+	topY.push(Math.cos(yaw+4.71239)*radius*Math.sin(pitch)+Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+
+	botX.push(Math.sin(yaw+0)*radius+positionX);
+	botY.push(Math.cos(yaw+0)*radius*Math.sin(pitch)-Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	botX.push(Math.sin(yaw+1.5708)*radius+positionX);
+	botY.push(Math.cos(yaw+1.5708)*radius*Math.sin(pitch)-Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	botX.push(Math.sin(yaw+3.14159)*radius+positionX);
+	botY.push(Math.cos(yaw+3.14159)*radius*Math.sin(pitch)-Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+	botX.push(Math.sin(yaw+4.71239)*radius+positionX);
+	botY.push(Math.cos(yaw+4.71239)*radius*Math.sin(pitch)-Math.cos(pitch)*Math.sqrt(radius*radius*2)/2+positionY);
+
+	// upper face
+	drawLine(topX[0], topY[0], topX[1], topY[1]);
+	drawLine(topX[1], topY[1], topX[2], topY[2]);
+	drawLine(topX[2], topY[2], topX[3], topY[3]);
+	drawLine(topX[3], topY[3], topX[0], topY[0]);
+
+	// lower face
+	drawLine(botX[0], botY[0], botX[1], botY[1]);
+	drawLine(botX[1], botY[1], botX[2], botY[2]);
+	drawLine(botX[2], botY[2], botX[3], botY[3]);
+	drawLine(botX[3], botY[3], botX[0], botY[0]);
+
+	// connections
+	drawLine(topX[0], topY[0], botX[0], botY[0]);
+	drawLine(topX[1], topY[1], botX[1], botY[1]);
+	drawLine(topX[2], topY[2], botX[2], botY[2]);
+	drawLine(topX[3], topY[3], botX[3], botY[3]);
+	console.log(yaw);
+
+	render();
+}
+
+function clear()
+{
+	for (var y = 0; y < canvasHeight; y++)
+		for (var x = 0; x < canvasWidth; x++)
+			buffer[y][x] = false;
+	
+	while (canvas.childNodes.length > 0)
+		canvas.removeChild(canvas.firstChild);
+}
+
+function drawPixel(x, y)
+{
+	buffer[y][x] = true;
+}
+
+function drawLine(x1, y1, x2, y2)
+{
+	x1 = Math.round(x1); y1 = Math.round(y1);
+	x2 = Math.round(x2); y2 = Math.round(y2);
+	var dx = Math.abs(x2-x1), sx = x1<x2?1:-1;
+	var dy = Math.abs(y2-y1), sy = y1<y2?1:-1; 
+	var err = (dx>dy?dx:-dy)/2;
+
+	while(true) {
+		drawPixel(x1, y1);
+		if (x1 === x2 && y1 === y2)
+			break;
+		var e2 = err;
+		if (e2 > -dx) {
+			err -= dy;
+			x1 += sx;
+		}
+		if (e2 < dy) {
+			err += dx;
+			y1 += sy;
+		}
+	}
+}
+
+function render()
+{
+	var t = '';
+	buffer.forEach(function(row) {
+		row.forEach(function(cell) {
+			t += cell===true?'▀':'.';
+		}, t);
+		t += "\n";
+	}, t);
+	t += "\nFPS: "+fps();
+	canvas.appendChild(document.createTextNode(t));
+}
+
+var lastLoop = new Date;
+function fps()
+{
+	var thisLoop = new Date;
+	var fps = 1000/(thisLoop-lastLoop);
+	lastLoop = thisLoop;
+	return fps.toFixed(1);
+}
+
+var horizontal_speed = 0;
+var vertical_speed = 0;
+document.onmousemove = function(event)
+{
+	horizontal_speed = event.pageX - document.body.clientWidth/2;
+	vertical_speed = event.pageY - document.body.clientHeight/2;
+}
+
+setInterval(update, delay);
+
+</script>
+</body>
+</html>
